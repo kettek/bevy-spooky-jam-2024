@@ -21,10 +21,12 @@ fn main() {
             Update,
             (
                 sprite_movement, /*, check_stacks*/
+                cleanup.run_if(in_state(AppState::Initial)),
                 kickstart.run_if(in_state(AppState::Loading)),
                 spawn_level.run_if(in_state(AppState::Kickstarted)),
             ),
         )
+        .add_systems(FixedUpdate, (move_camera,))
         .run();
 }
 
@@ -38,6 +40,17 @@ struct Level {
 #[derive(Resource)]
 struct LevelHandle(Handle<Level>);
 
+fn cleanup(
+    mut _commands: Commands,
+    _query: Query<Entity, Without<Window>>,
+    mut state: ResMut<NextState<AppState>>,
+) {
+    /*for entity in query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }*/
+    state.set(AppState::Loading);
+}
+
 #[derive(serde::Deserialize, Asset, TypePath)]
 struct KickStart {
     first_level: String,
@@ -50,10 +63,10 @@ struct KickstartHandle(Handle<KickStart>);
 fn kickstart(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut kickstart: ResMut<Assets<KickStart>>,
+    kickstart: ResMut<Assets<KickStart>>,
     mut state: ResMut<NextState<AppState>>,
 ) {
-    kickstart.iter().for_each(|(handle, kickstart)| {
+    kickstart.iter().for_each(|(_handle, kickstart)| {
         info!("Kickstarting with first level: {}", kickstart.first_level);
         state.set(AppState::Kickstarted);
 
@@ -72,32 +85,43 @@ fn kickstart(
 fn spawn_level(
     mut commands: Commands,
     level_handle: Res<LevelHandle>,
-    mut levels: ResMut<Assets<Level>>,
+    levels: ResMut<Assets<Level>>,
     mut state: ResMut<NextState<AppState>>,
     mut asset_server: Res<AssetServer>,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
     info!("Spawning level");
 
-    levels.iter().for_each(|(handle, level)| {
+    if let Some(level) = levels.get(&level_handle.0) {
         info!("Level: {}", level.name);
         let max_y = level.map.len() as f32;
         for (y, row) in level.map.iter().enumerate() {
             let max_x = row.len() as f32;
             for (x, tile) in row.chars().enumerate() {
-                let mut rel_x = (y as f32 - x as f32) * WALL_STEP_X as f32 * SCALE;
-                let mut rel_y = (y as f32 + x as f32) * WALL_STEP_Y as f32 * SCALE;
+                let rel_x = (y as f32 - x as f32) * WALL_STEP_X as f32 * SCALE;
+                let rel_y = (y as f32 + x as f32) * WALL_STEP_Y as f32 * SCALE;
 
                 let real_x = max_x - rel_x;
                 let real_y = max_y - rel_y;
 
                 if level.tiles.contains_key(&tile) {
                     let name = level.tiles.get(&tile).unwrap();
+                    let name_parts: Vec<&str> = name.split('.').collect();
+                    let mut dir: StackDirection = StackDirection::SOUTH;
+                    if name_parts.len() > 1 {
+                        match name_parts[1] {
+                            "N" => dir = StackDirection::NORTH,
+                            "E" => dir = StackDirection::EAST,
+                            "W" => dir = StackDirection::WEST,
+                            _ => dir = StackDirection::SOUTH,
+                        }
+                    }
+
                     let id = create_spritestack(
-                        name,
+                        name_parts[0],
                         0.,
                         0.,
-                        StackDirection::SOUTH,
+                        dir,
                         &mut commands,
                         &mut asset_server,
                         &mut texture_atlas_layouts,
@@ -111,18 +135,49 @@ fn spawn_level(
                         },))
                         .id();
                     commands.entity(tile).push_children(&[id]);
-                    continue;
                 }
             }
         }
-    });
+    }
 
     state.set(AppState::Level);
 }
 
+fn move_camera(
+    mut camera: Query<&mut Transform, With<Camera>>,
+    kb_input: Res<ButtonInput<KeyCode>>,
+) {
+    let mut dir = Vec3::ZERO;
+
+    if kb_input.pressed(KeyCode::KeyA) {
+        dir.x -= 1.;
+    }
+    if kb_input.pressed(KeyCode::KeyD) {
+        dir.x += 1.;
+    }
+    if kb_input.pressed(KeyCode::KeyW) {
+        dir.y += 1.;
+    }
+    if kb_input.pressed(KeyCode::KeyS) {
+        dir.y -= 1.;
+    }
+
+    dir.x *= WALL_SIZE as f32;
+    dir.y *= WALL_SIZE as f32;
+
+    if dir.length() > 0. {
+        camera.iter_mut().for_each(|mut camera| {
+            camera.translation.x += dir.x;
+            camera.translation.y += dir.y;
+        });
+    }
+}
+
+
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
 enum AppState {
     #[default]
+    Initial,
     Loading,
     Kickstarted,
     Level,
