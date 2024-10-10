@@ -1,9 +1,7 @@
 use std::f32::consts::PI;
 
 use bevy::{
-    log::tracing_subscriber::field::debug,
-    prelude::*,
-    render::view::{Layer, RenderLayers},
+    input::mouse::MouseButtonInput, prelude::*, render::view::RenderLayers, window::PrimaryWindow,
 };
 use bevy_common_assets::yaml::YamlAssetPlugin;
 
@@ -15,6 +13,7 @@ fn main() {
             YamlAssetPlugin::<KickStart>::new(&["kickstart.yaml"]),
         ))
         .insert_resource(Msaa::Off)
+        .init_resource::<Coords>()
         .init_state::<AppState>()
         .add_systems(Startup, setup)
         .add_systems(
@@ -24,6 +23,7 @@ fn main() {
                 cleanup.run_if(in_state(AppState::Initial)),
                 kickstart.run_if(in_state(AppState::Loading)),
                 spawn_level.run_if(in_state(AppState::Kickstarted)),
+                map_mouse_motion.run_if(in_state(AppState::Level)),
             ),
         )
         .add_systems(FixedUpdate, (move_camera,))
@@ -173,6 +173,42 @@ fn move_camera(
     }
 }
 
+#[derive(Resource, Default)]
+struct Coords(Vec2);
+
+fn map_mouse_motion(
+    mut cmer: EventReader<CursorMoved>,
+    mut mber: EventReader<MouseButtonInput>,
+    mut coords: ResMut<Coords>,
+    q_win: Query<&Window, With<PrimaryWindow>>,
+    q_cam: Query<(&Camera, &GlobalTransform)>,
+) {
+    for ev in cmer.read() {
+        info!("Mouse moved: {} {}", ev.position.x, ev.position.y);
+    }
+    for ev in mber.read() {
+        info!("Mouse button: {:?}", ev);
+    }
+
+    let (camera, camera_transform) = q_cam.iter().next().unwrap();
+
+    let win = q_win.single();
+
+    if let Some(pos) = win
+        .cursor_position()
+        .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
+        .map(|ray| ray.origin.truncate())
+    {
+        coords.0 = pos;
+        // Use pos to get the reverse operation of this.
+        // let rel_x = (y as f32 - x as f32) * WALL_STEP_X as f32 * SCALE;
+        // let rel_y = (y as f32 + x as f32) * WALL_STEP_Y as f32 * SCALE;
+        let x = (pos.y + pos.x) / (WALL_STEP_Y as f32 / SCALE);
+        let y = (pos.y - pos.x) / (WALL_STEP_X as f32 / SCALE);
+
+        eprintln!("World coords: {}/{} {}/{}", pos.x, pos.y, x, y,);
+    }
+}
 
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
 enum AppState {
