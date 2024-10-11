@@ -225,7 +225,7 @@ enum Direction {
     Down,
 }
 
-#[derive(Component)]
+/*#[derive(Component)]
 struct TurnTaker {
     max_actions: u32,
     rem_actions: u32,
@@ -251,7 +251,7 @@ struct Skills {
     heal: u32,
     dematerialize: u32,
     reform: u32,
-}
+}*/
 
 const TILE_ROTATION: f32 = -PI / 4.;
 const SCALE: f32 = 4.;
@@ -351,15 +351,15 @@ struct Tile {
     transform: Transform,
 }
 
-#[derive(Bundle)]
+/*#[derive(Bundle)]
 struct PlayerBundle {
     turn_taker: TurnTaker,
     leveler: Leveler,
     health: Health,
     skills: Skills,
-}
+}*/
 
-fn level_up(mut query: Query<(&mut Leveler, &mut Health, &mut Skills)>) {
+/*fn level_up(mut query: Query<(&mut Leveler, &mut Health, &mut Skills)>) {
     for (mut leveler, mut health, mut skills) in query.iter_mut() {
         if leveler.cur_xp >= leveler.next_level_xp {
             leveler.cur_level += 1;
@@ -369,13 +369,9 @@ fn level_up(mut query: Query<(&mut Leveler, &mut Health, &mut Skills)>) {
             skills.pending_points += 1;
         }
     }
-}
+}*/
 
-fn setup(
-    mut commands: Commands,
-    mut asset_server: Res<AssetServer>,
-    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
-) {
+fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     let handle = asset_server.load("kickstart.yaml");
     commands.insert_resource(KickstartHandle(handle));
 
@@ -425,7 +421,7 @@ fn sprite_movement(time: Res<Time>, mut sprite_position: Query<(&mut Direction, 
     }
 }
 
-#[derive(Resource)]
+/*#[derive(Resource)]
 struct AnimationState {
     min: f32,
     max: f32,
@@ -433,4 +429,4 @@ struct AnimationState {
     current: f32,
 }
 
-fn animate(mut sprites: Query<&mut Sprite>, mut state: ResMut<AnimationState>, time: Res<Time>) {}
+fn animate(mut sprites: Query<&mut Sprite>, mut state: ResMut<AnimationState>, time: Res<Time>) {}*/
