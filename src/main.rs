@@ -54,7 +54,6 @@ fn cleanup(
 #[derive(serde::Deserialize, Asset, TypePath)]
 struct KickStart {
     first_level: String,
-    levels: Vec<String>,
 }
 
 #[derive(Resource)]
