@@ -16,6 +16,7 @@ fn main() {
             YamlAssetPlugin::<Level>::new(&["level.yaml"]),
             YamlAssetPlugin::<KickStart>::new(&["kickstart.yaml"]),
         ))
+        .insert_resource(ClearColor(Color::srgb(0.1, 0.1, 0.1)))
         .insert_resource(Msaa::Off)
         .init_resource::<Coords>()
         .init_state::<AppState>()

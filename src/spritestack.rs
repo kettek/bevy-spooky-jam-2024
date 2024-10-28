@@ -41,8 +41,13 @@ pub fn create_spritestack(
                 StackDirection::SOUTH => 0.,
             };
             for i in 0..WALL_SLICES {
+                let alpha = 0.5 + (i as f32 / WALL_SLICES as f32) / 2.0;
                 parent.spawn(SpriteStackSlice {
                     sprite: SpriteBundle {
+                        sprite: Sprite {
+                            color: Color::srgb(alpha, alpha, alpha),
+                            ..default()
+                        },
                         texture: texture.clone(),
                         transform: Transform::from_xyz(0., i as f32, 0.)
                             .with_rotation(Quat::from_rotation_z(TILE_ROTATION + rotation)),
@@ -57,6 +62,10 @@ pub fn create_spritestack(
                 // HEH, duplicate with a light offset to smooth out edges.
                 parent.spawn(SpriteStackSlice {
                     sprite: SpriteBundle {
+                        sprite: Sprite {
+                            color: Color::srgb(alpha, alpha, alpha),
+                            ..default()
+                        },
                         texture: texture.clone(),
                         transform: Transform::from_xyz(0., i as f32 - 0.5, 0.)
                             .with_rotation(Quat::from_rotation_z(TILE_ROTATION + rotation)),
